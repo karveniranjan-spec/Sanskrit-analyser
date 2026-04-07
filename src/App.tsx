@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import './App.css'; // Just keeping standard import if needed
 import type { VedicData } from './types';
-import { generateMockVedicData } from './mockData';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -10,15 +9,30 @@ function App() {
   const [vedicData, setVedicData] = useState<VedicData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!inputText.trim()) return;
     setIsProcessing(true);
-    // Simulate realistic API delay
-    setTimeout(() => {
-      const data = generateMockVedicData(inputText);
+    
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verse: inputText })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error || 'Failed to fetch data');
+      }
+
+      const data: VedicData = await response.json();
       setVedicData(data);
+    } catch (error: any) {
+      console.error("Analysis Error:", error);
+      alert(`Error analyzing verse: ${error.message}`);
+    } finally {
       setIsProcessing(false);
-    }, 1500);
+    }
   };
 
   const downloadMarkdown = () => {
